@@ -1,0 +1,613 @@
+{% extends "warbands/base.html" %}
+{% load warband_extras %}
+{% block title %}{{ wizard.name }} — Frostgrave Warband Ledger{% endblock %}
+{% block content %}
+<h1>{{ wizard.name }}</h1>
+<p class="muted">Level {{ wizard.level }}{% if wizard.school %} &middot; {{ wizard.school }}{% else %} &middot; No school chosen{% endif %}</p>
+
+<div class="panel">
+  <h2>Games</h2>
+  {% if games_with_forms %}
+    <div class="game-tab-nav">
+      {% for game, gform in games_with_forms %}
+        <button type="button" class="game-tab-label{% if forloop.first %} active{% endif %}" onclick="showGameTab('game-panel-{{ game.id }}', this)">{{ game.title|default:"Untitled Game" }}</button>
+      {% endfor %}
+    </div>
+    {% for game, gform in games_with_forms %}
+      <div class="game-tab-panel{% if forloop.first %} active{% endif %}" id="game-panel-{{ game.id }}">
+        <form method="post" action="{% url 'game-update' wizard.id game.id %}">
+          {% csrf_token %}
+          <div class="field"><label>Title</label>{{ gform.title }}</div>
+          <div class="stat-grid">
+            <div class="field"><label>Treasures Earned</label>{{ gform.treasures_earned }}</div>
+            <div class="field"><label>Gold Earned</label>{{ gform.gold_earned }}</div>
+            <div class="field"><label>Monsters Killed</label>{{ gform.monsters_killed }}</div>
+            <div class="field"><label>Successful Spells</label>{{ gform.successful_spells }}</div>
+            <div class="field"><label>Unsuccessful Spells</label>{{ gform.unsuccessful_spells }}</div>
+            <div class="field"><label>Bonus XP</label>{{ gform.bonus_xp }}</div>
+            <div class="field"><label>Total XP</label>{{ gform.total_xp }}</div>
+          </div>
+          <div class="field"><label>Items Earned From Treasure</label>{{ gform.items_earned }}</div>
+          <button type="submit">Save Game</button>
+        </form>
+        <form method="post" action="{% url 'game-delete' wizard.id game.id %}" class="inline" style="margin-top:.6rem;">
+          {% csrf_token %}<button class="danger" type="submit">Delete Game</button>
+        </form>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty">No games recorded yet.</div>
+  {% endif %}
+  <div class="frost-divider"></div>
+  <form method="post" action="{% url 'game-create' wizard.id %}" class="inline">
+    {% csrf_token %}
+    <button type="submit">+ Add Game</button>
+  </form>
+</div>
+
+<div class="panel">
+  <h2>Treasury &amp; Experience</h2>
+  <div class="stat-grid">
+    <div class="stat-box"><div class="label">Gold</div><div class="value">{{ wizard.gold }}</div></div>
+    <div class="stat-box"><div class="label">XP</div><div class="value">{{ wizard.experience }}</div></div>
+    <div class="stat-box"><div class="label">Total Treasures</div><div class="value">{{ wizard.total_treasures }}</div></div>
+  </div>
+  <form method="post" action="{% url 'wizard-adjust-gold-xp' wizard.id %}" class="form-row">
+    {% csrf_token %}
+    <div class="field"><label>Gold Δ</label>{{ gold_xp_form.gold_delta }}</div>
+    <div class="field"><label>XP Δ</label>{{ gold_xp_form.experience_delta }}</div>
+    <button type="submit">Apply</button>
+  </form>
+  <p class="muted">Use negative numbers to spend gold or nothing to leave a field unchanged. Gold is also spent automatically when you hire soldiers or buy home base upgrades.</p>
+
+  <div class="frost-divider"></div>
+  <h3>Purchase History</h3>
+  {% if purchases %}
+    <table>
+      <thead><tr><th>Purchase</th><th>Cost</th><th>When</th><th></th></tr></thead>
+      <tbody>
+      {% for purchase in purchases %}
+        <tr>
+          <td>{{ purchase.description }}</td>
+          <td class="muted">{{ purchase.amount }}gc</td>
+          <td class="muted">{{ purchase.created_at|date:"M j, H:i" }}</td>
+          <td>
+            <form method="post" class="inline" action="{% url 'purchase-undo' wizard.id purchase.id %}">
+              {% csrf_token %}<button type="submit" title="Removes the purchase and refunds {{ purchase.amount }}gc">Undo</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="empty">No purchases yet. Hiring soldiers and buying home base upgrades will show up here, undoable for a full refund.</div>
+  {% endif %}
+</div>
+
+<div class="panel">
+  <h2>Wizard</h2>
+  <form method="post" action="{% url 'wizard-update-stats' wizard.id %}">
+    {% csrf_token %}
+    <div class="field"><label>Name</label>{{ wizard_form.name }}</div>
+    <div class="stat-grid">
+      <div class="field"><label>Level</label>{{ wizard_form.level }}</div>
+      <div class="field"><label>Health</label>{{ wizard_form.current_health }}</div>
+      <div class="field"><label>Move</label>{{ wizard_form.move }}</div>
+      <div class="field"><label>Fight</label>{{ wizard_form.fight }}</div>
+      <div class="field"><label>Shoot</label>{{ wizard_form.shoot }}</div>
+      <div class="field"><label>Armour</label>{{ wizard_form.armour }}</div>
+      <div class="field"><label>Will</label>{{ wizard_form.will }}</div>
+      <div class="field"><label>Max Health</label>{{ wizard_form.health }}</div>
+    </div>
+    <button type="submit">Save Stats</button>
+  </form>
+</div>
+
+{% if apprentice %}
+<div class="panel">
+  <h2>Apprentice</h2>
+  <p class="muted">Starts with the wizard's stats, minus 2 health and 2 will. Editable independently from here on.</p>
+  <form method="post" action="{% url 'apprentice-update-stats' wizard.id %}">
+    {% csrf_token %}
+    <div class="field"><label>Name</label>{{ apprentice_form.name }}</div>
+    <div class="stat-grid">
+      <div class="field"><label>Health</label>{{ apprentice_form.current_health }}</div>
+      <div class="field"><label>Move</label>{{ apprentice_form.move }}</div>
+      <div class="field"><label>Fight</label>{{ apprentice_form.fight }}</div>
+      <div class="field"><label>Shoot</label>{{ apprentice_form.shoot }}</div>
+      <div class="field"><label>Armour</label>{{ apprentice_form.armour }}</div>
+      <div class="field"><label>Will</label>{{ apprentice_form.will }}</div>
+      <div class="field"><label>Max Health</label>{{ apprentice_form.health }}</div>
+    </div>
+    <button type="submit">Save Apprentice</button>
+  </form>
+  <div class="frost-divider"></div>
+  <form method="post" action="{% url 'apprentice-retire' wizard.id %}">
+    {% csrf_token %}
+    <button class="danger" type="submit" title="No gold returned">Retire Apprentice</button>
+  </form>
+</div>
+{% else %}
+<div class="panel">
+  <h2>Apprentice</h2>
+  <div class="empty">This wizard has no apprentice.</div>
+  <form method="post" action="{% url 'apprentice-hire' wizard.id %}" style="margin-top:.8rem;">
+    {% csrf_token %}
+    <button type="submit">Hire Apprentice for 100gc</button>
+  </form>
+</div>
+{% endif %}
+
+
+<div class="panel">
+  <div class="tabs">
+    <input type="radio" name="warband-tabs" id="tab-warband" class="tab-input" checked>
+    <input type="radio" name="warband-tabs" id="tab-enemy" class="tab-input">
+    <input type="radio" name="warband-tabs" id="tab-monsters" class="tab-input">
+    <input type="radio" name="warband-tabs" id="tab-allspells" class="tab-input">
+
+    <div class="tab-nav">
+      <label for="tab-warband" class="tab-label">My Warband</label>
+      <label for="tab-enemy" class="tab-label">Mortal Enemy</label>
+      <label for="tab-monsters" class="tab-label">Monsters</label>
+      <label for="tab-allspells" class="tab-label">All Spells</label>
+    </div>
+
+    <div class="tab-panel" id="panel-warband">
+      <h2>Warband</h2>
+      {% if soldiers %}
+        <div class="soldier-list">
+        {% for soldier in soldiers %}
+          <div class="soldier-card">
+            <div class="soldier-card-head">
+              <div>
+                <span class="spell-name">{{ soldier.soldier_type.name|readable_name }}</span>
+                {% if soldier.name %}<span class="muted">"{{ soldier.name }}"</span>{% endif %}
+              </div>
+              <div class="spell-actions">
+                <span class="muted">Paid {{ soldier.price_paid }}gc</span>
+                <form method="post" class="inline" action="{% url 'warband-sell-soldier' wizard.id soldier.id %}">
+                  {% csrf_token %}<button type="submit" title="Refunds {{ soldier.price_paid }}gc">Sell</button>
+                </form>
+                <form method="post" class="inline" action="{% url 'warband-retire-soldier' wizard.id soldier.id %}">
+                  {% csrf_token %}<button class="danger" type="submit" title="No gold returned">Retire</button>
+                </form>
+              </div>
+            </div>
+            <div class="readable-stats">
+              <span><strong>Move</strong> {{ soldier.effective_move }}</span>
+              <span><strong>Fight</strong> {{ soldier.effective_fight }}</span>
+              <span><strong>Shoot</strong> {{ soldier.effective_shoot }}</span>
+              <span><strong>Armour</strong> {{ soldier.effective_armour }}</span>
+              <span><strong>Will</strong> {{ soldier.effective_will }}</span>
+            </div>
+            <form method="post" class="inline" action="{% url 'soldier-update-health' wizard.id soldier.id %}" style="margin-top:.5rem;">
+              {% csrf_token %}
+              <label class="inline-label">Health</label>
+              <input type="number" name="current_health" value="{{ soldier.current_health }}" style="width:60px;">
+              <button type="submit">Set</button>
+            </form>
+            <form method="post" action="{% url 'soldier-update-description' wizard.id soldier.id %}" style="margin-top:.5rem;">
+              {% csrf_token %}
+              <label>Description</label>
+              <textarea name="description" placeholder="A short paragraph about this warband member...">{{ soldier.description|default:"" }}</textarea>
+              <button type="submit" style="margin-top:.4rem;">Save Description</button>
+            </form>
+          </div>
+        {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty">No soldiers hired yet.</div>
+      {% endif %}
+      <div class="frost-divider"></div>
+      <form method="post" action="{% url 'warband-add-soldier' wizard.id %}" class="form-row">
+        {% csrf_token %}
+        <div class="field"><label>Soldier Type</label>{{ add_soldier_form.soldier_type }}</div>
+        <div class="field"><label>Name (optional)</label>{{ add_soldier_form.name }}</div>
+        <button type="submit">Hire Soldier</button>
+      </form>
+      <p class="muted">Hiring deducts the soldier's cost from your gold. Selling later refunds what you paid; retiring does not.</p>
+    </div>
+
+    <div class="tab-panel" id="panel-enemy">
+      <h2>Mortal Enemy</h2>
+      {% if mortal_enemy %}
+        <p class="muted">This wizard's own mortal enemy — a rival wizard with its own stat block and warband.</p>
+        <form method="post" action="{% url 'mortal-enemy-update-stats' wizard.id %}">
+          {% csrf_token %}
+          <div class="form-row">
+            <div class="field"><label>Name</label>{{ mortal_enemy_form.name }}</div>
+            <div class="field"><label>Type</label>{{ mortal_enemy_form.type }}</div>
+          </div>
+          <div class="stat-grid">
+            <div class="field"><label>Health</label>{{ mortal_enemy_form.current_health }}</div>
+            <div class="field"><label>Move</label>{{ mortal_enemy_form.move }}</div>
+            <div class="field"><label>Fight</label>{{ mortal_enemy_form.fight }}</div>
+            <div class="field"><label>Shoot</label>{{ mortal_enemy_form.shoot }}</div>
+            <div class="field"><label>Armour</label>{{ mortal_enemy_form.armour }}</div>
+            <div class="field"><label>Will</label>{{ mortal_enemy_form.will }}</div>
+            <div class="field"><label>Max Health</label>{{ mortal_enemy_form.health }}</div>
+          </div>
+          <h3 style="margin-top:1rem;">Spell Slots</h3>
+          <div class="form-row">
+            <div class="field">
+              <label>Ranged Attack (Primary)</label>{{ mortal_enemy_form.ranged_attack_primary }}
+              {% if mortal_enemy.ranged_attack_primary %}<p class="muted spell-slot-desc">{{ mortal_enemy.ranged_attack_primary.description|default:"No description yet." }}</p>{% endif %}
+            </div>
+            <div class="field">
+              <label>Ranged Attack (Secondary)</label>{{ mortal_enemy_form.ranged_attack_secondary }}
+              {% if mortal_enemy.ranged_attack_secondary %}<p class="muted spell-slot-desc">{{ mortal_enemy.ranged_attack_secondary.description|default:"No description yet." }}</p>{% endif %}
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label>Utility (Primary)</label>{{ mortal_enemy_form.utility_primary }}
+              {% if mortal_enemy.utility_primary %}<p class="muted spell-slot-desc">{{ mortal_enemy.utility_primary.description|default:"No description yet." }}</p>{% endif %}
+            </div>
+            <div class="field">
+              <label>Utility (Secondary)</label>{{ mortal_enemy_form.utility_secondary }}
+              {% if mortal_enemy.utility_secondary %}<p class="muted spell-slot-desc">{{ mortal_enemy.utility_secondary.description|default:"No description yet." }}</p>{% endif %}
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label>Out of Game (Primary)</label>{{ mortal_enemy_form.out_of_game_primary }}
+              {% if mortal_enemy.out_of_game_primary %}<p class="muted spell-slot-desc">{{ mortal_enemy.out_of_game_primary.description|default:"No description yet." }}</p>{% endif %}
+            </div>
+            <div class="field">
+              <label>Out of Game (Secondary)</label>{{ mortal_enemy_form.out_of_game_secondary }}
+              {% if mortal_enemy.out_of_game_secondary %}<p class="muted spell-slot-desc">{{ mortal_enemy.out_of_game_secondary.description|default:"No description yet." }}</p>{% endif %}
+            </div>
+          </div>
+          <button type="submit">Save Mortal Enemy</button>
+        </form>
+
+        <div class="frost-divider"></div>
+        <h3>Items</h3>
+        {% if mortal_enemy_items %}
+          <table>
+            <thead><tr><th>Item</th><th></th></tr></thead>
+            <tbody>
+            {% for item in mortal_enemy_items %}
+              <tr>
+                <td>{{ item.name|readable_name }}{% if item.grants_spell %} <span class="pill grimoire">grimoire — teaches {{ item.grants_spell.name|readable_name }}</span>{% endif %}</td>
+                <td>
+                  <form method="post" class="inline" action="{% url 'mortal-enemy-remove-item' wizard.id item.id %}">
+                    {% csrf_token %}<button class="danger" type="submit">Remove</button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <div class="empty">No items yet.</div>
+        {% endif %}
+        <form method="post" action="{% url 'mortal-enemy-add-item' wizard.id %}" class="form-row">
+          {% csrf_token %}
+          <div class="field"><label>Item</label>{{ add_mortal_enemy_item_form.item }}</div>
+          <button type="submit">Add Item</button>
+        </form>
+
+        <div class="frost-divider"></div>
+        <h3>Warband</h3>
+        {% if mortal_enemy_soldiers %}
+          <div class="soldier-list">
+          {% for soldier in mortal_enemy_soldiers %}
+            <div class="soldier-card">
+              <div class="soldier-card-head">
+                <div>
+                  <span class="spell-name">{{ soldier.soldier_type.name|readable_name }}</span>
+                  {% if soldier.name %}<span class="muted">"{{ soldier.name }}"</span>{% endif %}
+                </div>
+                <div class="spell-actions">
+                  <form method="post" class="inline" action="{% url 'mortal-enemy-remove-soldier' wizard.id soldier.id %}">
+                    {% csrf_token %}<button class="danger" type="submit">Dismiss</button>
+                  </form>
+                </div>
+              </div>
+              <div class="readable-stats">
+                <span><strong>Move</strong> {{ soldier.effective_move }}</span>
+                <span><strong>Fight</strong> {{ soldier.effective_fight }}</span>
+                <span><strong>Shoot</strong> {{ soldier.effective_shoot }}</span>
+                <span><strong>Armour</strong> {{ soldier.effective_armour }}</span>
+                <span><strong>Will</strong> {{ soldier.effective_will }}</span>
+              </div>
+              <form method="post" class="inline" action="{% url 'mortal-enemy-soldier-update-health' wizard.id soldier.id %}" style="margin-top:.5rem;">
+                {% csrf_token %}
+                <label class="inline-label">Health</label>
+                <input type="number" name="current_health" value="{{ soldier.current_health }}" style="width:60px;">
+                <button type="submit">Set</button>
+              </form>
+              <form method="post" action="{% url 'mortal-enemy-soldier-update-description' wizard.id soldier.id %}" style="margin-top:.5rem;">
+                {% csrf_token %}
+                <label>Description</label>
+                <textarea name="description" placeholder="A short paragraph about this warband member...">{{ soldier.description|default:"" }}</textarea>
+                <button type="submit" style="margin-top:.4rem;">Save Description</button>
+              </form>
+            </div>
+          {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty">No soldiers hired yet.</div>
+        {% endif %}
+        <div class="frost-divider"></div>
+        <form method="post" action="{% url 'mortal-enemy-add-soldier' wizard.id %}" class="form-row">
+          {% csrf_token %}
+          <div class="field"><label>Soldier Type</label>{{ add_mortal_enemy_soldier_form.soldier_type }}</div>
+          <div class="field"><label>Name (optional)</label>{{ add_mortal_enemy_soldier_form.name }}</div>
+          <button type="submit">Hire Soldier</button>
+        </form>
+      {% else %}
+        <div class="empty">This wizard has no mortal enemy on record.</div>
+      {% endif %}
+    </div>
+
+    <div class="tab-panel" id="panel-monsters">
+      <h2>Monsters</h2>
+      <p class="muted">Reference stat blocks, managed by an admin. Not editable here.</p>
+      <input type="text" id="monster-search" placeholder="Search monsters by name..." oninput="filterMonsters(this.value)" style="margin-bottom:1rem;">
+      {% if monster_types %}
+        <div class="spell-list" id="monster-list">
+        {% for monster in monster_types %}
+          <div class="spell-card monster-card" data-monster-name="{{ monster.name|lower }}">
+            <div class="spell-card-head">
+              <span class="spell-name">{{ monster.name|readable_name }}</span>
+            </div>
+            <div class="readable-stats">
+              <span><strong>Move</strong> {{ monster.move|default:"—" }}</span>
+              <span><strong>Fight</strong> {{ monster.fight|default:"—" }}</span>
+              <span><strong>Shoot</strong> {{ monster.shoot|default:"—" }}</span>
+              <span><strong>Armour</strong> {{ monster.armour|default:"—" }}</span>
+              <span><strong>Will</strong> {{ monster.will|default:"—" }}</span>
+              <span><strong>Health</strong> {{ monster.health|default:"—" }}</span>
+            </div>
+            <p class="spell-description">{{ monster.description|default:"No description yet." }}</p>
+            {% if monster.items.all %}
+              <div class="frost-divider" style="margin:.6rem 0;"></div>
+              <div class="muted" style="font-size:.78rem; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.3rem;">Items</div>
+              {% for item in monster.items.all %}
+                <div style="margin-bottom:.4rem;">
+                  <span>{{ item.name|readable_name }}</span>
+                  {% if item.description %}<div class="muted item-desc">{{ item.description }}</div>{% endif %}
+                </div>
+              {% endfor %}
+            {% endif %}
+          </div>
+        {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty">No monsters defined yet. Add some in /admin.</div>
+      {% endif %}
+    </div>
+
+    <div class="tab-panel" id="panel-allspells">
+      <h2>All Spells</h2>
+      <p class="muted">Reference list of every spell — base casting cost with no school modifiers applied.</p>
+      <input type="text" id="spell-search" placeholder="Search spells by name..." oninput="filterAllSpells(this.value)" style="margin-bottom:1rem;">
+      {% if all_spells %}
+        <div class="spell-list" id="all-spells-list">
+        {% for spell in all_spells %}
+          <div class="spell-card all-spell-card" data-spell-name="{{ spell.name|lower }}">
+            <div class="spell-card-head">
+              <span class="spell-name">{{ spell.name|readable_name }}</span>
+              <span class="pill">{{ spell.school }}</span>
+              <span class="cost-chip" title="Base casting cost, no modifiers">{{ spell.base_casting_cost }}</span>
+            </div>
+            <p class="spell-description">{{ spell.description|default:"No description yet." }}</p>
+          </div>
+        {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty">No spells defined yet.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>Spells</h2>
+  <p class="muted">Grimoires (unlearned spells) live in the Items &amp; Vault section below. Base casting cost is set by the admin; the modifier comes from your wizard's school vs. the spell's school (2 = aligned, 4 = neutral, 6 = opposed, 0 for your own school). Invest points to lower the final cost — handy when you level up.</p>
+  {% if spells_by_school %}
+    {% for school, spells in spells_by_school %}
+      <h3 style="margin-top:1.2rem;">{{ school }}</h3>
+      <div class="spell-list">
+      {% for ws in spells %}
+        <div class="spell-card">
+          <div class="spell-card-head">
+            <div>
+              <span class="spell-name">{{ ws.spell.name|readable_name }}</span>
+            </div>
+            <div class="spell-actions">
+              <span class="cost-breakdown">
+                <span class="cost-chip" title="Base casting cost (admin-set)">{{ ws.base_casting_cost }}</span>
+                <span class="cost-op">+</span>
+                <span class="cost-chip" title="School alignment modifier">{{ ws.casting_modifier }}</span>
+                {% if ws.upgrade_discount %}
+                <span class="cost-op">+</span>
+                <span class="cost-chip" title="Home base upgrade effect">{{ ws.upgrade_discount|stringformat:"+d" }}</span>
+                {% endif %}
+                <span class="cost-op">−</span>
+                <span class="cost-chip" title="Points invested">{{ ws.points_invested }}</span>
+                <span class="cost-op">=</span>
+                <span class="cost-chip cost-final" title="Base + modifier + upgrade effect − points">{{ ws.final_casting_cost }}</span>
+              </span>
+              <form method="post" class="inline" action="{% url 'wizard-spell-update-points' wizard.id ws.id %}">
+                {% csrf_token %}
+                <label class="inline-label">Points</label>
+                <input type="number" name="points_invested" value="{{ ws.points_invested }}" min="0" style="width:60px;">
+                <button type="submit">Set</button>
+              </form>
+              <form method="post" class="inline" action="{% url 'wizard-remove-spell' wizard.id ws.id %}">
+                {% csrf_token %}<button class="danger" type="submit">Remove</button>
+              </form>
+            </div>
+          </div>
+          <p class="spell-description">{{ ws.spell.description|default:"No description yet." }}</p>
+        </div>
+      {% endfor %}
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty">No spells learned yet.</div>
+  {% endif %}
+  <div class="frost-divider"></div>
+  <form method="post" action="{% url 'wizard-add-spell' wizard.id %}" class="form-row">
+    {% csrf_token %}
+    <div class="field"><label>Spell</label>{{ add_spell_form.spell }}</div>
+    <button type="submit">Learn Spell</button>
+  </form>
+  <p class="muted">Casting cost is computed automatically when you learn a spell.</p>
+</div>
+
+<div class="panel">
+  <h2>Home Base</h2>
+  {% if wizard.home_base_type %}
+    <h3 style="margin-top:0;">{{ wizard.home_base_type }}</h3>
+    <p class="muted" style="white-space:pre-line;">{{ wizard.home_base_type.description|default:"No description." }}</p>
+  {% else %}
+    <div class="empty">No home base set yet.</div>
+  {% endif %}
+  <form method="post" action="{% url 'wizard-set-home-base' wizard.id %}" class="form-row">
+    {% csrf_token %}
+    <div class="field"><label>{% if wizard.home_base_type %}Change{% else %}Set{% endif %} Home Base</label>{{ home_base_type_form.home_base_type }}</div>
+    <button type="submit">Save</button>
+  </form>
+
+  <div class="frost-divider"></div>
+  <h3>Upgrades</h3>
+  {% if owned_upgrades %}
+    <table>
+      <thead><tr><th>Upgrade</th><th>Description</th></tr></thead>
+      <tbody>
+      {% for upgrade in owned_upgrades %}
+        <tr>
+          <td>{{ upgrade.name|readable_name }}</td>
+          <td class="muted">{{ upgrade.description|default:"—" }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="empty">No upgrades purchased yet.</div>
+  {% endif %}
+  {% if home_base_upgrade_form.fields.upgrade.queryset.exists %}
+    <div class="frost-divider"></div>
+    <form method="post" action="{% url 'wizard-buy-home-base-upgrade' wizard.id %}" class="form-row">
+      {% csrf_token %}
+      <div class="field"><label>Buy Upgrade</label>{{ home_base_upgrade_form.upgrade }}</div>
+      <button type="submit">Purchase</button>
+    </form>
+  {% endif %}
+</div>
+
+<div class="panel">
+  <h2>Items &amp; Vault</h2>
+  <p class="muted">Carried items are held by whoever's pack they're in; vaulted items stay safely at the home base.</p>
+  <div class="item-boxes">
+    <div class="item-box">
+      <h3>🧙 Wizard's Pack</h3>
+      {% if wizard_carried_items %}
+        {% for wi in wizard_carried_items %}
+          <div class="item-row">
+            <div>
+              <div>{{ wi.item.name|readable_name }} <span class="muted">x{{ wi.quantity }}</span></div>
+              {% if wi.item.description %}<div class="muted item-desc">{{ wi.item.description }}</div>{% endif %}
+              {% if wi.item.grants_spell %}<span class="pill grimoire">grimoire — teaches {{ wi.item.grants_spell.name|readable_name }}</span>{% endif %}
+            </div>
+            <form method="post" class="inline" action="{% url 'wizard-remove-item' wizard.id wi.id %}">
+              {% csrf_token %}<button class="danger" type="submit">Remove</button>
+            </form>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty">Empty.</div>
+      {% endif %}
+    </div>
+
+    <div class="item-box">
+      <h3>📗 Apprentice's Pack</h3>
+      {% if apprentice_carried_items %}
+        {% for wi in apprentice_carried_items %}
+          <div class="item-row">
+            <div>
+              <div>{{ wi.item.name|readable_name }} <span class="muted">x{{ wi.quantity }}</span></div>
+              {% if wi.item.description %}<div class="muted item-desc">{{ wi.item.description }}</div>{% endif %}
+              {% if wi.item.grants_spell %}<span class="pill grimoire">grimoire — teaches {{ wi.item.grants_spell.name|readable_name }}</span>{% endif %}
+            </div>
+            <form method="post" class="inline" action="{% url 'wizard-remove-item' wizard.id wi.id %}">
+              {% csrf_token %}<button class="danger" type="submit">Remove</button>
+            </form>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty">Empty.</div>
+      {% endif %}
+    </div>
+
+    <div class="item-box">
+      <h3>🗄 Vault</h3>
+      {% if vaulted_items %}
+        {% for wi in vaulted_items %}
+          <div class="item-row">
+            <div>
+              <div>{{ wi.item.name|readable_name }} <span class="muted">x{{ wi.quantity }}</span></div>
+              {% if wi.item.description %}<div class="muted item-desc">{{ wi.item.description }}</div>{% endif %}
+              {% if wi.item.grants_spell %}<span class="pill grimoire">grimoire — teaches {{ wi.item.grants_spell.name|readable_name }}</span>{% endif %}
+            </div>
+            <form method="post" class="inline" action="{% url 'wizard-remove-item' wizard.id wi.id %}">
+              {% csrf_token %}<button class="danger" type="submit">Remove</button>
+            </form>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty">Empty.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="frost-divider"></div>
+  <form method="post" action="{% url 'wizard-add-item' wizard.id %}" class="form-row">
+    {% csrf_token %}
+    <div class="field"><label>Item</label>{{ add_item_form.item }}</div>
+    <div class="field"><label>Qty</label>{{ add_item_form.quantity }}</div>
+    <div class="field"><label>Carried By</label>{{ add_item_form.location }}</div>
+    <button type="submit">Add Item</button>
+  </form>
+</div>
+
+<div class="panel" style="border-color:#7a3226;">
+  <h2>Danger Zone</h2>
+  <p class="muted">Permanently deletes this wizard along with its apprentice, mortal enemy, warband, spells, items, purchases, and games. This cannot be undone.</p>
+  <form method="post" action="{% url 'wizard-delete' wizard.id %}" onsubmit="return confirm('Permanently delete {{ wizard.name }}? This cannot be undone.');">
+    {% csrf_token %}
+    <button class="danger" type="submit">Delete Wizard</button>
+  </form>
+</div>
+
+<p><a href="{% url 'warband-list' %}">← Back to all wizards</a></p>
+
+<script>
+function showGameTab(panelId, btn) {
+  document.querySelectorAll('.game-tab-panel').forEach(function(el) { el.classList.remove('active'); });
+  document.querySelectorAll('.game-tab-label').forEach(function(el) { el.classList.remove('active'); });
+  document.getElementById(panelId).classList.add('active');
+  btn.classList.add('active');
+}
+function filterMonsters(query) {
+  var q = query.trim().toLowerCase();
+  document.querySelectorAll('.monster-card').forEach(function(card) {
+    var name = card.getAttribute('data-monster-name') || '';
+    card.classList.toggle('hidden', q.length > 0 && name.indexOf(q) === -1);
+  });
+}
+function filterAllSpells(query) {
+  var q = query.trim().toLowerCase();
+  document.querySelectorAll('.all-spell-card').forEach(function(card) {
+    var name = card.getAttribute('data-spell-name') || '';
+    card.classList.toggle('hidden', q.length > 0 && name.indexOf(q) === -1);
+  });
+}
+</script>
+{% endblock %}

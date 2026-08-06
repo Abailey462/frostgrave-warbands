@@ -1,0 +1,113 @@
+{% extends "warbands/base.html" %}
+{% load warband_extras %}
+{% block title %}Choose Starting Spells — {{ wizard.name }}{% endblock %}
+{% block content %}
+<h1>{{ wizard.name }}'s Starting Spells</h1>
+<p class="muted">Primary school: <strong>{{ wizard.school }}</strong>. Choose 8 spells total: 3 from your primary school, 3 from aligned schools (no two from the same school), and 2 from neutral schools (no two from the same school). Picks update live below — you can't submit until each group is exactly right, and a mistake won't clear what you've already picked.</p>
+
+<form method="post" id="starting-spells-form">
+  {% csrf_token %}
+
+  <div class="panel">
+    <h2>Primary School — <span id="primary-count">0</span>/3 chosen</h2>
+    <p class="muted">All from {{ wizard.school }}.</p>
+    <div class="spell-checkbox-list" data-group="primary" data-limit="3">
+    {% for spell in primary_spells %}
+      <label class="spell-checkbox">
+        <input type="checkbox" name="primary_spells" value="{{ spell.id }}" {% if spell.id in selected_primary_ids %}checked{% endif %}>
+        <span class="spell-checkbox-body">
+          <span class="spell-name">{{ spell.name|readable_name }}</span>
+          <span class="spell-description">{{ spell.description|default:"No description yet." }}</span>
+        </span>
+      </label>
+    {% endfor %}
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Aligned Schools — <span id="aligned-count">0</span>/3 chosen, no two from the same school</h2>
+    <div class="spell-checkbox-list" data-group="aligned" data-limit="3" data-unique-school="true">
+    {% for spell in aligned_spells %}
+      <label class="spell-checkbox" data-school-id="{{ spell.school_id }}">
+        <input type="checkbox" name="aligned_spells" value="{{ spell.id }}" {% if spell.id in selected_aligned_ids %}checked{% endif %}>
+        <span class="spell-checkbox-body">
+          <span class="spell-name">{{ spell.name|readable_name }}</span> <span class="pill">{{ spell.school }}</span>
+          <span class="spell-description">{{ spell.description|default:"No description yet." }}</span>
+        </span>
+      </label>
+    {% endfor %}
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Neutral Schools — <span id="neutral-count">0</span>/2 chosen, no two from the same school</h2>
+    <div class="spell-checkbox-list" data-group="neutral" data-limit="2" data-unique-school="true">
+    {% for spell in neutral_spells %}
+      <label class="spell-checkbox" data-school-id="{{ spell.school_id }}">
+        <input type="checkbox" name="neutral_spells" value="{{ spell.id }}" {% if spell.id in selected_neutral_ids %}checked{% endif %}>
+        <span class="spell-checkbox-body">
+          <span class="spell-name">{{ spell.name|readable_name }}</span> <span class="pill">{{ spell.school }}</span>
+          <span class="spell-description">{{ spell.description|default:"No description yet." }}</span>
+        </span>
+      </label>
+    {% endfor %}
+    </div>
+  </div>
+
+  <button type="submit" id="confirm-spells-btn">Confirm Starting Spells</button>
+  <p class="muted" id="confirm-hint">Finish choosing 3 / 3 / 2 spells above to enable this.</p>
+</form>
+
+<script>
+(function() {
+  var groups = document.querySelectorAll('.spell-checkbox-list');
+
+  function updateGroup(group) {
+    var limit = parseInt(group.getAttribute('data-limit'), 10);
+    var uniqueSchool = group.getAttribute('data-unique-school') === 'true';
+    var checkboxes = group.querySelectorAll('input[type=checkbox]');
+    var checkedCount = 0;
+    var checkedSchools = {};
+
+    checkboxes.forEach(function(cb) {
+      if (cb.checked) {
+        checkedCount++;
+        var label = cb.closest('.spell-checkbox');
+        var schoolId = label ? label.getAttribute('data-school-id') : null;
+        if (schoolId) { checkedSchools[schoolId] = true; }
+      }
+    });
+
+    checkboxes.forEach(function(cb) {
+      var label = cb.closest('.spell-checkbox');
+      var schoolId = label ? label.getAttribute('data-school-id') : null;
+      var atLimit = checkedCount >= limit;
+      var schoolTaken = uniqueSchool && schoolId && checkedSchools[schoolId] && !cb.checked;
+      cb.disabled = (!cb.checked) && (atLimit || schoolTaken);
+      label.style.opacity = cb.disabled ? '0.45' : '1';
+    });
+
+    var countEl = document.getElementById(group.getAttribute('data-group') + '-count');
+    if (countEl) { countEl.textContent = checkedCount; }
+    return checkedCount === limit;
+  }
+
+  function updateAll() {
+    var allValid = true;
+    groups.forEach(function(group) {
+      if (!updateGroup(group)) { allValid = false; }
+    });
+    var btn = document.getElementById('confirm-spells-btn');
+    var hint = document.getElementById('confirm-hint');
+    btn.disabled = !allValid;
+    hint.style.display = allValid ? 'none' : 'block';
+  }
+
+  groups.forEach(function(group) {
+    group.addEventListener('change', updateAll);
+  });
+
+  updateAll();
+})();
+</script>
+{% endblock %}

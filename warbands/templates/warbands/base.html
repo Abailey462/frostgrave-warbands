@@ -1,0 +1,229 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Frostgrave Warband Ledger{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --frost-night: #0d1520;
+      --frost-panel: #16212f;
+      --frost-panel-raised: #1d2c3d;
+      --frost-line: #2b3c4f;
+      --parchment: #e9e1cd;
+      --parchment-dim: #b9b19a;
+      --ice: #8fd8de;
+      --ice-dim: #4d7d82;
+      --ember: #c1553a;
+      --gold: #d4af5a;
+      font-size: 16px;
+    }
+    *{ box-sizing: border-box; }
+    body{
+      margin:0;
+      background:
+        radial-gradient(ellipse at top left, rgba(143,216,222,0.06), transparent 45%),
+        radial-gradient(ellipse at bottom right, rgba(193,85,58,0.05), transparent 50%),
+        var(--frost-night);
+      color: var(--parchment);
+      font-family: 'Spectral', serif;
+      min-height:100vh;
+    }
+    a{ color: var(--ice); text-decoration: none; }
+    a:hover{ text-decoration: underline; }
+    h1,h2,h3{ font-family:'Cinzel', serif; letter-spacing:0.02em; color: var(--parchment); margin:0 0 .4em; }
+    .site-header{
+      display:flex; align-items:center; justify-content:space-between;
+      padding: 1.1rem 2rem; border-bottom: 1px solid var(--frost-line);
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+    }
+    .brand{ font-family:'Cinzel', serif; font-weight:700; font-size:1.3rem; color:var(--parchment); letter-spacing:.06em; display:flex; align-items:center; gap:.6rem;}
+    .brand .rune{ color: var(--ice); font-size:1.1rem; }
+    .site-header nav a{ margin-left:1.3rem; color:var(--parchment-dim); font-size:.92rem; letter-spacing:.03em; text-transform:uppercase;}
+    .site-header nav a:hover{ color: var(--ice); }
+    main{ max-width: 1080px; margin: 0 auto; padding: 2.2rem 1.5rem 4rem; }
+    .panel{
+      background: var(--frost-panel);
+      border: 1px solid var(--frost-line);
+      border-radius: 6px;
+      padding: 1.4rem 1.6rem;
+      margin-bottom: 1.4rem;
+      position: relative;
+    }
+    .panel::before{
+      content:"";
+      position:absolute; top:0; left:0; right:0; height:2px;
+      background: linear-gradient(90deg, transparent, var(--ice-dim), transparent);
+      opacity:.6;
+    }
+    .stat-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(90px,1fr)); gap:.7rem; margin: .8rem 0; }
+    .stat-box{
+      background: var(--frost-panel-raised);
+      border: 1px solid var(--frost-line);
+      border-radius:4px;
+      padding:.6rem .5rem;
+      text-align:center;
+    }
+    .stat-box .label{ font-family:'JetBrains Mono', monospace; font-size:.68rem; text-transform:uppercase; letter-spacing:.08em; color:var(--parchment-dim); }
+    .stat-box .value{ font-family:'JetBrains Mono', monospace; font-size:1.35rem; color: var(--ice); font-weight:600; }
+    table{ width:100%; border-collapse:collapse; margin-top:.6rem; }
+    th{ text-align:left; font-family:'JetBrains Mono', monospace; font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--parchment-dim); border-bottom:1px solid var(--frost-line); padding:.5rem .4rem; }
+    td{ padding:.55rem .4rem; border-bottom:1px solid rgba(43,60,79,0.5); font-size:.95rem; }
+    tr:hover td{ background: rgba(143,216,222,0.03); }
+    .pill{ display:inline-block; padding:.15rem .55rem; border-radius:99px; font-family:'JetBrains Mono',monospace; font-size:.7rem; border:1px solid var(--frost-line); color:var(--parchment-dim); }
+    .pill.learned{ color:var(--ice); border-color: var(--ice-dim); }
+    .pill.grimoire{ color:var(--gold); border-color: var(--gold); }
+    form.inline{ display:inline; }
+    button, input[type=submit]{
+      font-family:'JetBrains Mono', monospace; font-size:.82rem; letter-spacing:.02em;
+      background: var(--frost-panel-raised); color: var(--ice);
+      border:1px solid var(--ice-dim); border-radius:4px; padding:.45rem .8rem; cursor:pointer;
+    }
+    button:hover, input[type=submit]:hover{ background: var(--ice-dim); color: var(--frost-night); }
+    button:disabled{ opacity:.4; cursor:not-allowed; }
+    button:disabled:hover{ background: var(--frost-panel-raised); color: var(--ice); }
+    button.danger{ border-color:#7a3226; color:#e2917f; }
+    button.danger:hover{ background:#7a3226; color:var(--parchment); }
+    input[type=text], input[type=number], input[type=password], select, textarea{
+      background: var(--frost-night); border:1px solid var(--frost-line); color:var(--parchment);
+      border-radius:4px; padding:.4rem .55rem; font-family:'Spectral',serif; font-size:.92rem;
+      width:100%; max-width:100%; box-sizing:border-box;
+    }
+    textarea{ font-family:'Spectral',serif; resize:vertical; min-height:4.5em; }
+    label{ display:block; font-size:.78rem; color:var(--parchment-dim); margin-bottom:.2rem; text-transform:uppercase; letter-spacing:.04em; font-family:'JetBrains Mono',monospace; }
+    .field{ margin-bottom:.7rem; min-width:0; }
+    .form-row{ display:flex; gap:.8rem; flex-wrap:wrap; align-items:end; }
+    .form-row .field{ flex:1 1 140px; min-width:0; }
+    .messages{ list-style:none; padding:0; margin: 0 0 1rem; }
+    .messages li{ padding:.6rem .9rem; border-radius:4px; margin-bottom:.4rem; font-size:.9rem; border:1px solid var(--frost-line); background: var(--frost-panel-raised); }
+    .messages li.success{ border-color: var(--ice-dim); }
+    .messages li.error{ border-color: #7a3226; }
+    .wizard-card{ display:flex; justify-content:space-between; align-items:center; }
+    .wizard-card .meta{ color:var(--parchment-dim); font-size:.85rem; }
+    .frost-divider{ height:1px; background: linear-gradient(90deg, transparent, var(--frost-line), transparent); margin: 1.4rem 0; }
+    .muted{ color: var(--parchment-dim); font-size:.85rem; }
+    .empty{ color: var(--parchment-dim); font-style: italic; padding: 1rem 0; }
+    footer{ text-align:center; padding:2rem; color: var(--parchment-dim); font-size:.78rem; font-family:'JetBrains Mono',monospace;}
+
+    /* Radio-driven tabs (no JS needed) */
+    .tabs{ position:relative; }
+    .tab-input{ position:absolute; opacity:0; pointer-events:none; }
+    .tab-nav{ display:flex; gap:.4rem; border-bottom:1px solid var(--frost-line); margin-bottom:1.1rem; }
+    .tab-label{
+      font-family:'Cinzel', serif; font-size:.85rem; letter-spacing:.04em; text-transform:uppercase;
+      padding:.6rem 1rem; cursor:pointer; color:var(--parchment-dim);
+      border-bottom:2px solid transparent; margin-bottom:-1px;
+    }
+    .tab-label:hover{ color: var(--ice); }
+    .tab-panel{ display:none; }
+    #tab-warband:checked ~ .tab-nav label[for="tab-warband"],
+    #tab-enemy:checked ~ .tab-nav label[for="tab-enemy"],
+    #tab-monsters:checked ~ .tab-nav label[for="tab-monsters"],
+    #tab-allspells:checked ~ .tab-nav label[for="tab-allspells"]{
+      color: var(--ice); border-bottom-color: var(--ice);
+    }
+    #tab-warband:checked ~ #panel-warband{ display:block; }
+    #tab-enemy:checked ~ #panel-enemy{ display:block; }
+    #tab-monsters:checked ~ #panel-monsters{ display:block; }
+    #tab-allspells:checked ~ #panel-allspells{ display:block; }
+
+    /* Spell cards — enough room for a short paragraph description */
+    .spell-list{ display:flex; flex-direction:column; gap:.7rem; }
+    .spell-card{
+      background: var(--frost-panel-raised); border:1px solid var(--frost-line);
+      border-radius:5px; padding:.85rem 1rem;
+    }
+    .spell-card-head{ display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:.6rem; }
+    .spell-name{ font-family:'Cinzel', serif; font-size:1.02rem; color:var(--parchment); margin-right:.6rem; }
+    .spell-actions{ display:flex; align-items:center; gap:.6rem; flex-wrap:wrap; }
+    .inline-label{ font-size:.7rem; color:var(--parchment-dim); text-transform:uppercase; margin-right:.3rem; }
+    .spell-description{ margin:.6rem 0 0; color: var(--parchment-dim); font-size:.92rem; line-height:1.5; max-width:70ch; }
+    .spell-slot-desc{ font-size:.8rem; margin:.3rem 0 0; max-width:40ch; }
+
+    /* Warband/monster soldier cards */
+    .soldier-list{ display:flex; flex-direction:column; gap:.7rem; }
+    .soldier-card{
+      background: var(--frost-panel-raised); border:1px solid var(--frost-line);
+      border-radius:5px; padding:.85rem 1rem;
+    }
+    .soldier-card-head{ display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:.6rem; }
+    .readable-stats{ display:flex; flex-wrap:wrap; gap:.9rem; margin-top:.5rem; font-size:.88rem; color:var(--parchment-dim); }
+    .readable-stats strong{ color:var(--parchment); font-weight:600; margin-right:.25rem; }
+    .monster-card.hidden{ display:none; }
+    .all-spell-card.hidden{ display:none; }
+
+    /* Item boxes — wizard's pack / apprentice's pack / vault */
+    .item-boxes{ display:grid; grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); gap:1rem; margin-top:.6rem; }
+    .item-box{ background: var(--frost-panel-raised); border:1px solid var(--frost-line); border-radius:5px; padding:.8rem .9rem; }
+    .item-box h3{ font-size:.95rem; margin-bottom:.6rem; }
+    .item-row{ display:flex; justify-content:space-between; align-items:flex-start; gap:.5rem; padding:.5rem 0; border-bottom:1px solid rgba(43,60,79,0.5); }
+    .item-row:last-child{ border-bottom:none; }
+    .item-desc{ font-size:.8rem; margin-top:.15rem; max-width:32ch; }
+
+    /* Casting cost breakdown chips (base + modifier = final) */
+    .cost-breakdown{ display:inline-flex; align-items:center; gap:.35rem; margin-right:.5rem; }
+    .cost-chip{
+      font-family:'JetBrains Mono', monospace; font-size:.78rem; background: var(--frost-night);
+      border:1px solid var(--frost-line); border-radius:3px; padding:.15rem .45rem; color:var(--parchment-dim);
+    }
+    .cost-chip.cost-final{ color: var(--ice); border-color: var(--ice-dim); }
+    .cost-op{ color: var(--parchment-dim); font-size:.8rem; }
+
+    /* Starting-spell selection checkboxes */
+    .spell-checkbox-list{ display:flex; flex-direction:column; gap:.5rem; }
+    .spell-checkbox{
+      display:flex; align-items:flex-start; gap:.6rem; cursor:pointer;
+      background: var(--frost-panel-raised); border:1px solid var(--frost-line);
+      border-radius:5px; padding:.6rem .8rem;
+    }
+    .spell-checkbox input[type=checkbox]{ margin-top:.3rem; }
+    .spell-checkbox-body{ display:flex; flex-direction:column; gap:.15rem; }
+    .spell-checkbox-body .spell-description{ margin:0; font-size:.85rem; }
+
+    /* Game tabs (at the very top of the wizard page) — visibility toggled by a small inline script */
+    .game-tab-nav{ display:flex; gap:.4rem; flex-wrap:wrap; border-bottom:1px solid var(--frost-line); margin-bottom:1rem; padding-bottom:0; }
+    .game-tab-label{
+      font-family:'Cinzel', serif; font-size:.82rem; letter-spacing:.03em; text-transform:uppercase;
+      padding:.55rem .9rem; cursor:pointer; color:var(--parchment-dim); background:none; border:none;
+      border-bottom:2px solid transparent; margin-bottom:-1px;
+    }
+    .game-tab-label:hover{ color: var(--ice); }
+    .game-tab-label.active{ color: var(--ice); border-bottom-color: var(--ice); }
+    .game-tab-panel{ display:none; }
+    .game-tab-panel.active{ display:block; }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="brand"><span class="rune">✦</span> Frostgrave Warband Ledger</div>
+    <nav>
+      {% if user.is_authenticated %}
+        <a href="{% url 'warband-list' %}">My Wizards</a>
+        <a href="{% url 'wizard-create' %}">New Wizard</a>
+        {% if user.is_staff %}<a href="/admin/">Admin</a>{% endif %}
+        <form class="inline" action="{% url 'logout' %}" method="post" style="display:inline;">
+          {% csrf_token %}
+          <button type="submit" style="margin-left:1rem;">Log out</button>
+        </form>
+      {% else %}
+        <a href="{% url 'login' %}">Log in</a>
+        <a href="{% url 'signup' %}">Sign Up</a>
+      {% endif %}
+    </nav>
+  </header>
+  <main>
+    {% if messages %}
+      <ul class="messages">
+        {% for message in messages %}
+          <li class="{{ message.tags }}">{{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+  <footer>Frostgrave Warband Ledger &middot; unofficial fan-made tracker</footer>
+</body>
+</html>

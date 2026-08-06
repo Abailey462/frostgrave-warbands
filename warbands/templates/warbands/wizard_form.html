@@ -1,0 +1,36 @@
+{% extends "warbands/base.html" %}
+{% block title %}New Wizard - Frostgrave Warband Ledger{% endblock %}
+{% block content %}
+<h1>Conjure a New Wizard</h1>
+<div class="panel">
+  <form method="post">
+    {% csrf_token %}
+    <div class="field">
+      <label for="{{ form.name.id_for_label }}">Name</label>
+      {{ form.name }}
+    </div>
+    <div class="field">
+      <label for="{{ form.school.id_for_label }}">School of Magic</label>
+      {{ form.school }}
+      <p class="muted" style="font-size:.8rem; margin-top:.3rem;">Determines the casting-cost modifier for spells outside this school. Choose carefully — it's set once, here.</p>
+    </div>
+    <div class="stat-grid">
+      <div class="field"><label>Level</label>{{ form.level }}</div>
+      <div class="field"><label>Health</label>{{ form.current_health }}</div>
+      <div class="field"><label>Move</label>{{ form.move }}</div>
+      <div class="field"><label>Fight</label>{{ form.fight }}</div>
+      <div class="field"><label>Shoot</label>{{ form.shoot }}</div>
+      <div class="field"><label>Armour</label>{{ form.armour }}</div>
+      <div class="field"><label>Will</label>{{ form.will }}</div>
+      <div class="field"><label>Max Health</label>{{ form.health }}</div>
+    </div>
+    <p class="muted">You start with 400gc. After this, you'll choose 8 starting spells. Home base is set later, from the wizard's own page.</p>
+    <div class="field" style="margin-top:.6rem;">
+      <label style="text-transform:none; display:flex; align-items:center; gap:.5rem;">
+        {{ form.hire_apprentice }} {{ form.hire_apprentice.label }}
+      </label>
+    </div>
+    <button type="submit">Create Wizard</button>
+  </form>
+</div>
+{% endblock %}

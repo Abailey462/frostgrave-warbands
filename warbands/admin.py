@@ -1,0 +1,20 @@
+from django.contrib import admin
+
+from .models import *
+admin.site.register(Apprentice)
+admin.site.register(Game)
+admin.site.register(HomeBaseType)
+admin.site.register(HomeBaseUpgrade)
+admin.site.register(Item)
+admin.site.register(MonsterType)
+admin.site.register(MortalEnemy)
+admin.site.register(Purchase)
+admin.site.register(School)
+admin.site.register(SchoolAffinity)
+admin.site.register(Soldier)
+admin.site.register(SoldierType)
+admin.site.register(Spell)
+admin.site.register(Warband)
+admin.site.register(Wizard)
+admin.site.register(WizardItem)
+admin.site.register(WizardSpell)
