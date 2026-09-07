@@ -25,7 +25,10 @@
             <div class="field"><label>Successful Spells</label>{{ gform.successful_spells }}</div>
             <div class="field"><label>Unsuccessful Spells</label>{{ gform.unsuccessful_spells }}</div>
             <div class="field"><label>Bonus XP</label>{{ gform.bonus_xp }}</div>
-            <div class="field"><label>Total XP</label>{{ gform.total_xp }}</div>
+            <div class="field">
+              <label>Total XP</label>
+              <div class="stat-box" style="padding:.4rem .5rem;"><div class="value" style="font-size:1rem;">{{game.total_xp}} / 300</div></div>
+            </div>
           </div>
           <div class="field"><label>Items Earned From Treasure</label>{{ gform.items_earned }}</div>
           <button type="submit">Save Game</button>
@@ -47,42 +50,48 @@
 
 <div class="panel">
   <h2>Treasury &amp; Experience</h2>
-  <div class="stat-grid">
-    <div class="stat-box"><div class="label">Gold</div><div class="value">{{ wizard.gold }}</div></div>
-    <div class="stat-box"><div class="label">XP</div><div class="value">{{ wizard.experience }}</div></div>
-    <div class="stat-box"><div class="label">Total Treasures</div><div class="value">{{ wizard.total_treasures }}</div></div>
-  </div>
-  <form method="post" action="{% url 'wizard-adjust-gold-xp' wizard.id %}" class="form-row">
-    {% csrf_token %}
-    <div class="field"><label>Gold Δ</label>{{ gold_xp_form.gold_delta }}</div>
-    <div class="field"><label>XP Δ</label>{{ gold_xp_form.experience_delta }}</div>
-    <button type="submit">Apply</button>
-  </form>
-  <p class="muted">Use negative numbers to spend gold or nothing to leave a field unchanged. Gold is also spent automatically when you hire soldiers or buy home base upgrades.</p>
+  <div class="tabs">
+    <input type="radio" name="treasury-tabs" id="tab-treasury-overview" class="tab-input" checked>
+    <input type="radio" name="treasury-tabs" id="tab-treasure-tables" class="tab-input">
 
-  <div class="frost-divider"></div>
-  <h3>Purchase History</h3>
-  {% if purchases %}
-    <table>
-      <thead><tr><th>Purchase</th><th>Cost</th><th>When</th><th></th></tr></thead>
-      <tbody>
-      {% for purchase in purchases %}
-        <tr>
-          <td>{{ purchase.description }}</td>
-          <td class="muted">{{ purchase.amount }}gc</td>
-          <td class="muted">{{ purchase.created_at|date:"M j, H:i" }}</td>
-          <td>
-            <form method="post" class="inline" action="{% url 'purchase-undo' wizard.id purchase.id %}">
-              {% csrf_token %}<button type="submit" title="Removes the purchase and refunds {{ purchase.amount }}gc">Undo</button>
-            </form>
-          </td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  {% else %}
-    <div class="empty">No purchases yet. Hiring soldiers and buying home base upgrades will show up here, undoable for a full refund.</div>
-  {% endif %}
+    <div class="tab-nav">
+      <label for="tab-treasury-overview" class="tab-label">Overview</label>
+      <label for="tab-treasure-tables" class="tab-label">Treasure Tables</label>
+    </div>
+
+    <div class="tab-panel" id="panel-treasury-overview">
+      <div class="stat-grid">
+        <div class="stat-box"><div class="label">Gold</div><div class="value">{{ wizard.gold }}</div></div>
+        <div class="stat-box"><div class="label">XP</div><div class="value">{{ wizard.experience }}</div></div>
+        <div class="stat-box"><div class="label">Total Treasures</div><div class="value">{{ wizard.total_treasures }}</div></div>
+      </div>
+      <form method="post" action="{% url 'wizard-adjust-gold-xp' wizard.id %}" class="form-row">
+        {% csrf_token %}
+        <input type="hidden" name="gold_direction" id="gold-direction" value="1">
+        <input type="hidden" name="xp_direction" id="xp-direction" value="1">
+        <div class="field">
+          <label>Gold Δ</label>
+          <div style="display:flex; gap:.4rem; align-items:center;">
+            <button type="button" class="direction-toggle" onclick="toggleDirection('gold-direction', this)" title="Click to switch between adding and subtracting">▲</button>
+            {{ gold_xp_form.gold_delta }}
+          </div>
+        </div>
+        <div class="field">
+          <label>XP Δ</label>
+          <div style="display:flex; gap:.4rem; align-items:center;">
+            <button type="button" class="direction-toggle" onclick="toggleDirection('xp-direction', this)" title="Click to switch between adding and subtracting">▲</button>
+            {{ gold_xp_form.experience_delta }}
+          </div>
+        </div>
+        <button type="submit">Apply</button>
+      </form>
+      <p class="muted">Enter a positive amount and use ▲/▼ to add or subtract it. Gold is also spent automatically when hiring soldiers or buying upgrades; XP is spent automatically when learning spells, investing points, or raising a stat.</p>
+    </div>
+
+    <div class="tab-panel" id="panel-treasure-tables">
+      <div class="empty">Treasure tables coming soon.</div>
+    </div>
+  </div>
 </div>
 
 <div class="panel">
@@ -108,24 +117,15 @@
 <div class="panel">
   <h2>Apprentice</h2>
   <p class="muted">Starts with the wizard's stats, minus 2 health and 2 will. Editable independently from here on.</p>
-  <form method="post" action="{% url 'apprentice-update-stats' wizard.id %}">
+  <form method="post" action="{% url 'apprentice-update-stats' wizard.id %}" class="form-row" style="align-items:end;">
     {% csrf_token %}
     <div class="field"><label>Name</label>{{ apprentice_form.name }}</div>
-    <div class="stat-grid">
-      <div class="field"><label>Health</label>{{ apprentice_form.current_health }}</div>
-      <div class="field"><label>Move</label>{{ apprentice_form.move }}</div>
-      <div class="field"><label>Fight</label>{{ apprentice_form.fight }}</div>
-      <div class="field"><label>Shoot</label>{{ apprentice_form.shoot }}</div>
-      <div class="field"><label>Armour</label>{{ apprentice_form.armour }}</div>
-      <div class="field"><label>Will</label>{{ apprentice_form.will }}</div>
-      <div class="field"><label>Max Health</label>{{ apprentice_form.health }}</div>
-    </div>
+    <div class="field"><label>Current Health</label>{{ apprentice_form.current_health }}</div>
     <button type="submit">Save Apprentice</button>
+    <button class="danger" type="submit" form="apprentice-retire-form" title="XD">Retire Apprentice</button>
   </form>
-  <div class="frost-divider"></div>
-  <form method="post" action="{% url 'apprentice-retire' wizard.id %}">
+  <form method="post" action="{% url 'apprentice-retire' wizard.id %}" id="apprentice-retire-form" style="display:none;" onsubmit="return confirm('Retire {{ apprentice.name }}? This cannot be undone and no gold is returned.');">
     {% csrf_token %}
-    <button class="danger" type="submit" title="No gold returned">Retire Apprentice</button>
   </form>
 </div>
 {% else %}
@@ -145,12 +145,14 @@
     <input type="radio" name="warband-tabs" id="tab-warband" class="tab-input" checked>
     <input type="radio" name="warband-tabs" id="tab-enemy" class="tab-input">
     <input type="radio" name="warband-tabs" id="tab-monsters" class="tab-input">
+    <input type="radio" name="warband-tabs" id="tab-soldiers" class="tab-input">
     <input type="radio" name="warband-tabs" id="tab-allspells" class="tab-input">
 
     <div class="tab-nav">
       <label for="tab-warband" class="tab-label">My Warband</label>
       <label for="tab-enemy" class="tab-label">Mortal Enemy</label>
       <label for="tab-monsters" class="tab-label">Monsters</label>
+      <label for="tab-soldiers" class="tab-label">Soldiers</label>
       <label for="tab-allspells" class="tab-label">All Spells</label>
     </div>
 
@@ -167,33 +169,25 @@
               </div>
               <div class="spell-actions">
                 <span class="muted">Paid {{ soldier.price_paid }}gc</span>
-                <form method="post" class="inline" action="{% url 'warband-sell-soldier' wizard.id soldier.id %}">
-                  {% csrf_token %}<button type="submit" title="Refunds {{ soldier.price_paid }}gc">Sell</button>
-                </form>
                 <form method="post" class="inline" action="{% url 'warband-retire-soldier' wizard.id soldier.id %}">
                   {% csrf_token %}<button class="danger" type="submit" title="No gold returned">Retire</button>
                 </form>
               </div>
             </div>
-            <div class="readable-stats">
+            <form method="post" class="readable-stats" action="{% url 'soldier-update-health' wizard.id soldier.id %}">
+              {% csrf_token %}
               <span><strong>Move</strong> {{ soldier.effective_move }}</span>
               <span><strong>Fight</strong> {{ soldier.effective_fight }}</span>
               <span><strong>Shoot</strong> {{ soldier.effective_shoot }}</span>
               <span><strong>Armour</strong> {{ soldier.effective_armour }}</span>
               <span><strong>Will</strong> {{ soldier.effective_will }}</span>
-            </div>
-            <form method="post" class="inline" action="{% url 'soldier-update-health' wizard.id soldier.id %}" style="margin-top:.5rem;">
-              {% csrf_token %}
-              <label class="inline-label">Health</label>
-              <input type="number" name="current_health" value="{{ soldier.current_health }}" style="width:60px;">
-              <button type="submit">Set</button>
+              <span>
+                <strong>Health</strong>
+                <input type="number" name="current_health" value="{{ soldier.current_health }}" style="width:55px;">
+                <button type="submit">Set</button>
+              </span>
             </form>
-            <form method="post" action="{% url 'soldier-update-description' wizard.id soldier.id %}" style="margin-top:.5rem;">
-              {% csrf_token %}
-              <label>Description</label>
-              <textarea name="description" placeholder="A short paragraph about this warband member...">{{ soldier.description|default:"" }}</textarea>
-              <button type="submit" style="margin-top:.4rem;">Save Description</button>
-            </form>
+            {% if soldier.description %}<p class="spell-description">{{ soldier.description }}</p>{% endif %}
           </div>
         {% endfor %}
         </div>
@@ -207,7 +201,7 @@
         <div class="field"><label>Name (optional)</label>{{ add_soldier_form.name }}</div>
         <button type="submit">Hire Soldier</button>
       </form>
-      <p class="muted">Hiring deducts the soldier's cost from your gold. Selling later refunds what you paid; retiring does not.</p>
+      <p class="muted">Hiring deducts the soldier's cost from your gold. Retiring does not return it.</p>
     </div>
 
     <div class="tab-panel" id="panel-enemy">
@@ -308,11 +302,20 @@
                 </div>
               </div>
               <div class="readable-stats">
+              <form method="post" class="readable-stats" action="{% url 'mortal-enemy-soldier-update-health' wizard.id soldier.id %}">
+                {% csrf_token %}
                 <span><strong>Move</strong> {{ soldier.effective_move }}</span>
                 <span><strong>Fight</strong> {{ soldier.effective_fight }}</span>
                 <span><strong>Shoot</strong> {{ soldier.effective_shoot }}</span>
                 <span><strong>Armour</strong> {{ soldier.effective_armour }}</span>
                 <span><strong>Will</strong> {{ soldier.effective_will }}</span>
+                <span>
+                  <strong>Health</strong>
+                  <input type="number" name="current_health" value="{{ soldier.current_health }}" style="width:55px;">
+                  <button type="submit">Set</button>
+                </span>
+              </form>
+              {% if soldier.description %}<p class="spell-description">{{ soldier.description }}</p>{% endif %}
               </div>
               <form method="post" class="inline" action="{% url 'mortal-enemy-soldier-update-health' wizard.id soldier.id %}" style="margin-top:.5rem;">
                 {% csrf_token %}
@@ -381,6 +384,45 @@
         <div class="empty">No monsters defined yet. Add some in /admin.</div>
       {% endif %}
     </div>
+
+    <div class="tab-panel" id="panel-soldiers">
+      <h2>Soldiers</h2>
+      <p class="muted">Reference stat blocks for every hireable soldier type.</p>
+      <input type="text" id="soldier-type-search" placeholder="Search soldier types by name..." oninput="filterSoldierTypes(this.value)" style="margin-bottom:1rem;">
+      {% if soldier_types %}
+        <div class="spell-list" id="soldier-type-list">
+        {% for st in soldier_types %}
+          <div class="spell-card soldier-type-card" data-soldier-type-name="{{ st.name|lower }}">
+            <div class="spell-card-head">
+              <span class="spell-name">{{ st.name|readable_name }}</span>
+              <span class="cost-chip" title="Base hire cost, no upgrades applied">{{ st.hire_cost }}gc</span>
+            </div>
+            <div class="readable-stats">
+              <span><strong>Move</strong> {{ st.move|default:"—" }}</span>
+              <span><strong>Fight</strong> {{ st.fight|default:"—" }}</span>
+              <span><strong>Shoot</strong> {{ st.shoot|default:"—" }}</span>
+              <span><strong>Armour</strong> {{ st.armour|default:"—" }}</span>
+              <span><strong>Will</strong> {{ st.will|default:"—" }}</span>
+              <span><strong>Health</strong> {{ st.health|default:"—" }}</span>
+            </div>
+            {% if st.base_items.all %}
+              <div class="frost-divider" style="margin:.6rem 0;"></div>
+              <div class="muted" style="font-size:.78rem; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.3rem;">Starting Items</div>
+              {% for item in st.base_items.all %}
+                <div style="margin-bottom:.4rem;">
+                  <span>{{ item.name|readable_name }}</span>
+                  {% if item.description %}<div class="muted item-desc">{{ item.description }}</div>{% endif %}
+                </div>
+              {% endfor %}
+            {% endif %}
+          </div>
+        {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty">No soldier types defined yet.</div>
+      {% endif %}
+    </div>
+
 
     <div class="tab-panel" id="panel-allspells">
       <h2>All Spells</h2>
@@ -602,10 +644,32 @@ function filterMonsters(query) {
     card.classList.toggle('hidden', q.length > 0 && name.indexOf(q) === -1);
   });
 }
+function toggleDirection(hiddenInputId, btn) {
+  var hidden = document.getElementById(hiddenInputId);
+  if (hidden.value === '1') {
+    hidden.value = '-1';
+    btn.textContent = '▼';
+  } else {
+    hidden.value = '1';
+    btn.textContent = '▲';
+  }
+}
 function filterAllSpells(query) {
   var q = query.trim().toLowerCase();
-  document.querySelectorAll('.all-spell-card').forEach(function(card) {
-    var name = card.getAttribute('data-spell-name') || '';
+  document.querySelectorAll('.all-spell-card').forEach(function(card, index) {
+    if (q.length === 0) {
+      card.classList.toggle('hidden', index >= 4);
+    } else {
+      var name = card.getAttribute('data-spell-name') || '';
+      card.classList.toggle('hidden', name.indexOf(q) === -1);
+    }
+  });
+ }
+filterAllSpells('');
+function filterSoldierTypes(query) {
+  var q = query.trim().toLowerCase();
+  document.querySelectorAll('.soldier-type-card').forEach(function(card) {
+    var name = card.getAttribute('data-soldier-type-name') || '';
     card.classList.toggle('hidden', q.length > 0 && name.indexOf(q) === -1);
   });
 }

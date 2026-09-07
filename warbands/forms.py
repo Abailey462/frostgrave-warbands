@@ -64,9 +64,8 @@ class WizardStatsForm(forms.ModelForm):
 class ApprenticeForm(forms.ModelForm):
     class Meta:
         model = Apprentice
-        fields = ["name", "current_health", "move", "fight", "shoot", "armour", "will", "health"]
-        widgets = {f: forms.NumberInput(attrs={"class": "num-input"})
-                   for f in ["current_health", "move", "fight", "shoot", "armour", "will", "health"]}
+        fields = ["name", "current_health"]
+        widgets = {"current_health": forms.NumberInput(attrs={"class": "num-input"})}
 
 
 class MortalEnemyForm(forms.ModelForm):
@@ -84,8 +83,8 @@ class MortalEnemyForm(forms.ModelForm):
 
 
 class GoldExperienceForm(forms.Form):
-    gold_delta = forms.IntegerField(required=False, initial=0)
-    experience_delta = forms.IntegerField(required=False, initial=0)
+    gold_delta = forms.IntegerField(required=False, initial=0, min_value=0)
+    experience_delta = forms.IntegerField(required=False, initial=0, min_value=0)
 
 
 class SoldierTypeChoiceField(forms.ModelChoiceField):
@@ -158,10 +157,10 @@ class GameForm(forms.ModelForm):
         fields = [
             "title", "treasures_earned", "gold_earned", "items_earned",
             "monsters_killed", "successful_spells", "unsuccessful_spells",
-            "bonus_xp", "total_xp",
+            "bonus_xp",
         ]
         widgets = {
             f: forms.NumberInput(attrs={"class": "num-input"})
             for f in ["treasures_earned", "gold_earned", "monsters_killed",
-                       "successful_spells", "unsuccessful_spells", "bonus_xp", "total_xp"]
+                       "successful_spells", "unsuccessful_spells", "bonus_xp"]
         }

@@ -28,11 +28,13 @@ from .models import (
     MonsterType,
     Purchase,
     Soldier,
+    SoldierType,
     Spell,
     Warband,
     Wizard,
     WizardItem,
     WizardSpell,
+    XP_COST_PER_POINT,
     get_aligned_and_neutral_schools,
 )
 
@@ -224,12 +226,11 @@ def wizard_detail(request, wizard_id):
         "home_base_upgrade_form": BuyHomeBaseUpgradeForm(wizard=wizard),
         "owned_upgrades": wizard.home_base_upgrades.all(),
 
-        "purchases": wizard.purchases.all(),
-
         "games_with_forms": [(game, GameForm(instance=game)) for game in wizard.games.all()],
 
         "monster_types": MonsterType.objects.prefetch_related("items").all(),
         "all_spells": Spell.objects.select_related("school").order_by("school__name", "name"),
+        "soldier_types": SoldierType.objects.prefetch_related("base_items").all()
     }
     return render(request, "warbands/wizard_detail.html", context)
 
@@ -248,10 +249,33 @@ def wizard_delete(request, wizard_id):
 @require_POST
 def wizard_update_stats(request, wizard_id):
     wizard = _get_owned_wizard(request, wizard_id)
+    stat_fields = ["move", "fight", "shoot", "armour", "will", "health"]
+    old_values = {f: getattr(wizard, f) for f in stat_fields}
     form = WizardStatsForm(request.POST, instance=wizard)
     if form.is_valid():
         form.save()
         messages.success(request, "Wizard stats updated.")
+        updated = form.save(commit=False)
+        points_added = sum(max(0, getattr(updated, f) - old_values[f]) for f in stat_fields)
+        cost = points_added * XP_COST_PER_POINT
+        if cost > updated.experience:
+            messages.error(
+                request,
+                f"Not enough XP - {cost} XP required"
+            )
+        else:
+            updated.experience -= cost
+            updated.save()
+            apprentice = getattr(updated, "apprentice", None)
+            if apprentice is not None:
+                apprentice.move = updated.move
+                apprentice.fight = updated.fight
+                apprentice.shoot = updated.shoot
+                apprentice.armour = updated.armour
+                apprentice.will = max(0, updated.will - 2)
+                apprentice.health = max(1, updated.health - 2)
+                apprentice.save(update_fields=["move", "fight", "shoot", "armour", "will", "health"])
+            messages.success(request, "Wizard stats updated")
     else:
         messages.error(request, "Could not update wizard stats.")
     return redirect("wizard-detail", wizard_id=wizard.id)
@@ -263,8 +287,10 @@ def wizard_adjust_gold_xp(request, wizard_id):
     wizard = _get_owned_wizard(request, wizard_id)
     form = GoldExperienceForm(request.POST)
     if form.is_valid():
-        gold_delta = form.cleaned_data.get("gold_delta") or 0
-        xp_delta = form.cleaned_data.get("experience_delta") or 0
+        gold_direction = -1 if request.POST.get("gold_direction") == "-1" else 1
+        xp_direction = -1 if request.POST.get("xp_direction") == "-1" else 1
+        gold_delta = (form.cleaned_data.get("gold_delta") or 0) * gold_direction
+        xp_delta = (form.cleaned_data.get("experience_delta") or 0) * xp_direction
         wizard.gold = max(0, wizard.gold + gold_delta)
         wizard.experience = max(0, wizard.experience + xp_delta)
         wizard.save(update_fields=["gold", "experience"])
@@ -376,8 +402,15 @@ def wizard_add_spell(request, wizard_id):
     form = AddWizardSpellForm(request.POST)
     if form.is_valid():
         spell = form.cleaned_data["spell"]
-        WizardSpell.objects.get_or_create(wizard=wizard, spell=spell)
-        messages.success(request, "Spell added.")
+        if wizard.wizard_spells.filter(spell=spell).exists():
+            messages.info(request, "Already learned")
+        elif wizard.experience < XP_COST_PER_POINT:
+            messages.error(f"Not enough XP {XP_COST_PER_POINT} required")
+        else:
+            wizard.experience -= XP_COST_PER_POINT
+            wizard.save(update_fields=["experience"])
+            WizardSpell.objects.create(wizard=wizard, spell=spell)
+            messages.success(request, "Spell added.")
     return redirect("wizard-detail", wizard_id=wizard.id)
 
 
@@ -396,13 +429,19 @@ def wizard_spell_update_points(request, wizard_id, wizard_spell_id):
     wizard = _get_owned_wizard(request, wizard_id)
     wizard_spell = get_object_or_404(WizardSpell, id=wizard_spell_id, wizard=wizard)
     try:
-        wizard_spell.points_invested = max(
-            0, int(request.POST.get("points_invested", wizard_spell.points_invested))
-        )
-        wizard_spell.save(update_fields=["points_invested"])
-        messages.success(request, "Points updated.")
+        new_points = max(0, int(request.POST.get("points_invested", wizard_spell.points_invested)))
     except (TypeError, ValueError):
         messages.error(request, "Invalid points value.")
+        return redirect("wizard-detail", wizard_id=wizard.id)
+    cost = max(0, new_points - wizard_spell.points_invested) * XP_COST_PER_POINT
+    if cost > wizard.experience:
+        messages.error(request, f"Not enough XP, {XP_COST_PER_POINT} XP required")
+    else:
+        wizard.experience -= cost
+        wizard.save(update_fields=["experience"])
+        wizard_spell.points_invested = new_points
+        wizard_spell.save(update_fields=["points_invested"])
+        messages.success(request, "Spell updated successfully")
     return redirect("wizard-detail", wizard_id=wizard.id)
 
 
@@ -475,17 +514,6 @@ def soldier_update_health(request, wizard_id, soldier_id):
         soldier.save(update_fields=["current_health"])
     except (TypeError, ValueError):
         messages.error(request, "Invalid health value.")
-    return redirect("wizard-detail", wizard_id=wizard.id)
-
-
-@login_required
-@require_POST
-def soldier_update_description(request, wizard_id, soldier_id):
-    wizard = _get_owned_wizard(request, wizard_id)
-    soldier = get_object_or_404(Soldier, id=soldier_id, warband__wizard=wizard)
-    soldier.description = request.POST.get("description", "") or None
-    soldier.save(update_fields=["description"])
-    messages.success(request, "Description updated.")
     return redirect("wizard-detail", wizard_id=wizard.id)
 
 
@@ -611,17 +639,6 @@ def mortal_enemy_soldier_update_health(request, wizard_id, soldier_id):
         soldier.save(update_fields=["current_health"])
     except (TypeError, ValueError):
         messages.error(request, "Invalid health value.")
-    return redirect("wizard-detail", wizard_id=wizard_id)
-
-
-@login_required
-@require_POST
-def mortal_enemy_soldier_update_description(request, wizard_id, soldier_id):
-    mortal_enemy = _get_owned_mortal_enemy(request, wizard_id)
-    soldier = get_object_or_404(Soldier, id=soldier_id, warband__mortal_enemy=mortal_enemy)
-    soldier.description = request.POST.get("description", "") or None
-    soldier.save(update_fields=["description"])
-    messages.success(request, "Description updated.")
     return redirect("wizard-detail", wizard_id=wizard_id)
 
 

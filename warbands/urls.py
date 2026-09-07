@@ -30,7 +30,6 @@ urlpatterns = [
     path("wizards/<int:wizard_id>/sell-soldier/<int:soldier_id>/", views.warband_sell_soldier, name="warband-sell-soldier"),
     path("wizards/<int:wizard_id>/retire-soldier/<int:soldier_id>/", views.warband_retire_soldier, name="warband-retire-soldier"),
     path("wizards/<int:wizard_id>/soldier/<int:soldier_id>/health/", views.soldier_update_health, name="soldier-update-health"),
-    path("wizards/<int:wizard_id>/soldier/<int:soldier_id>/description/", views.soldier_update_description, name="soldier-update-description"),
 
     # Purchases (undo)
     path("wizards/<int:wizard_id>/purchase/<int:purchase_id>/undo/", views.purchase_undo, name="purchase-undo"),
@@ -52,5 +51,4 @@ urlpatterns = [
     path("wizards/<int:wizard_id>/mortal-enemy/add-soldier/", views.mortal_enemy_add_soldier, name="mortal-enemy-add-soldier"),
     path("wizards/<int:wizard_id>/mortal-enemy/remove-soldier/<int:soldier_id>/", views.mortal_enemy_remove_soldier, name="mortal-enemy-remove-soldier"),
     path("wizards/<int:wizard_id>/mortal-enemy/soldier/<int:soldier_id>/health/", views.mortal_enemy_soldier_update_health, name="mortal-enemy-soldier-update-health"),
-    path("wizards/<int:wizard_id>/mortal-enemy/soldier/<int:soldier_id>/description/", views.mortal_enemy_soldier_update_description, name="mortal-enemy-soldier-update-description"),
 ]

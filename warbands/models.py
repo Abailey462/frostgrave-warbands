@@ -189,6 +189,7 @@ class HomeBaseUpgrade(models.Model):
 # ---------------------------------------------------------------------------
 # Player-owned wizard
 # ---------------------------------------------------------------------------
+XP_COST_PER_POINT = 100
 
 class Wizard(models.Model):
     owner = models.ForeignKey(
@@ -525,7 +526,17 @@ class Game(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ["created_at"]
+        ordering = ["-created_at"]
+
+    def save(self, *args, **kwargs):
+        computed = (
+            self.successful_spells * 10
+            + self.unsuccessful_spells * 5
+            + self.monsters_killed * 5
+            + self.bonus_xp
+        )
+        self.total_xp = min(300, computed)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.title or f"Game #{self.pk}"

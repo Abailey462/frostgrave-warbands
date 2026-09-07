@@ -122,13 +122,19 @@
     #tab-warband:checked ~ .tab-nav label[for="tab-warband"],
     #tab-enemy:checked ~ .tab-nav label[for="tab-enemy"],
     #tab-monsters:checked ~ .tab-nav label[for="tab-monsters"],
-    #tab-allspells:checked ~ .tab-nav label[for="tab-allspells"]{
+    #tab-soldiers:checked ~ .tab-nav label[for="tab-soldiers"],
+    #tab-allspells:checked ~ .tab-nav label[for="tab-allspells"],
+    #tab-treasury-overview:checked ~ .tab-nav label[for="tab-treasury-overview"],
+    #tab-treasure-tables:checked ~ .tab-nav label[for="tab-treasure-tables"]{
       color: var(--ice); border-bottom-color: var(--ice);
     }
     #tab-warband:checked ~ #panel-warband{ display:block; }
     #tab-enemy:checked ~ #panel-enemy{ display:block; }
     #tab-monsters:checked ~ #panel-monsters{ display:block; }
+    #tab-soldiers:checked ~ #panel-soldiers{ display:block; }
     #tab-allspells:checked ~ #panel-allspells{ display:block; }
+    #tab-treasury-overview:checked ~ #panel-treasury-overview{ display:block; }
+    #tab-treasure-tables:checked ~ #panel-treasure-tables{ display:block; }
 
     /* Spell cards — enough room for a short paragraph description */
     .spell-list{ display:flex; flex-direction:column; gap:.7rem; }
@@ -154,6 +160,8 @@
     .readable-stats strong{ color:var(--parchment); font-weight:600; margin-right:.25rem; }
     .monster-card.hidden{ display:none; }
     .all-spell-card.hidden{ display:none; }
+    .soldier-type-card.hidden{ display:none; }
+    .direction-toggle{ padding:.4rem .55rem; font-size:1rem; line-height:1; }
 
     /* Item boxes — wizard's pack / apprentice's pack / vault */
     .item-boxes{ display:grid; grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); gap:1rem; margin-top:.6rem; }
