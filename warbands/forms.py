@@ -39,11 +39,11 @@ class WizardForm(forms.ModelForm):
     class Meta:
         model = Wizard
         fields = [
-            "name", "school", "level", "current_health",
+            "name", "school", "current_health",
             "move", "fight", "shoot", "armour", "will", "health",
         ]
         widgets = {f: forms.NumberInput(attrs={"class": "num-input"})
-                   for f in ["level", "current_health", "move", "fight", "shoot", "armour", "will", "health"]}
+                   for f in ["current_health", "move", "fight", "shoot", "armour", "will", "health"]}
 
 
 class WizardStatsForm(forms.ModelForm):
@@ -54,11 +54,11 @@ class WizardStatsForm(forms.ModelForm):
     class Meta:
         model = Wizard
         fields = [
-            "name", "level", "current_health",
+            "name", "current_health",
             "move", "fight", "shoot", "armour", "will", "health",
         ]
         widgets = {f: forms.NumberInput(attrs={"class": "num-input"})
-                   for f in ["level", "current_health", "move", "fight", "shoot", "armour", "will", "health"]}
+                   for f in ["current_health", "move", "fight", "shoot", "armour", "will", "health"]}
 
 
 class ApprenticeForm(forms.ModelForm):

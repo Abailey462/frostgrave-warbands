@@ -241,6 +241,19 @@ class Wizard(models.Model):
     def effective_hire_cost(self, soldier_type):
         return max(0, soldier_type.hire_cost + self.troop_cost_modifier_total)
 
+    def spend_experience(self, amount):
+        """Deduct `amount` XP, leveling up by 1 for every full 100xp spent
+        (every XP-charging action in this app always spends in multiples
+        of XP_COST_PER_POINT, so this stays exact). Returns False and
+        makes no changes if the wizard can't afford it."""
+        if amount <= 0:
+            return True
+        if amount > self.experience:
+            return False
+        self.experience -= amount
+        self.level += amount // 100
+        return True
+
 
 class Apprentice(models.Model):
     """
@@ -540,3 +553,36 @@ class Game(models.Model):
 
     def __str__(self):
         return self.title or f"Game #{self.pk}"
+
+
+
+# ---------------------------------------------------------------------------
+# Treasure tables — admin-managed reference grids of arbitrary size
+# ---------------------------------------------------------------------------
+
+class TreasureTable(models.Model):
+    """An admin-managed table (e.g. the game's core treasure table),
+    rendered as a grid. No public create/edit form — see /admin. `matrix`
+    is a list of rows, each row a list of cell values, so the grid can be
+    any size."""
+    title = models.CharField(max_length=100, unique=True)
+    matrix = models.JSONField(
+        default=list, blank=True,
+        help_text='A list of rows, each row a list of cells, e.g. [["Roll", "Result"], ["1-5", "Nothing"]].',
+    )
+    is_base = models.BooleanField(
+        default=False,
+        help_text="The table shown by default before a search is typed. Only one table should have "
+                   "this checked — checking it here automatically unchecks it on every other table.",
+    )
+
+    class Meta:
+        ordering = ["title"]
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if self.is_base:
+            TreasureTable.objects.exclude(pk=self.pk).update(is_base=False)
+
+    def __str__(self):
+        return self.title

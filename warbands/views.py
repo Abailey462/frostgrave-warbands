@@ -30,6 +30,7 @@ from .models import (
     Soldier,
     SoldierType,
     Spell,
+    TreasureTable,
     Warband,
     Wizard,
     WizardItem,
@@ -230,7 +231,8 @@ def wizard_detail(request, wizard_id):
 
         "monster_types": MonsterType.objects.prefetch_related("items").all(),
         "all_spells": Spell.objects.select_related("school").order_by("school__name", "name"),
-        "soldier_types": SoldierType.objects.prefetch_related("base_items").all()
+        "soldier_types": SoldierType.objects.prefetch_related("base_items").all(),
+        "treasure_tables": TreasureTable.objects.all(),
     }
     return render(request, "warbands/wizard_detail.html", context)
 
@@ -258,13 +260,12 @@ def wizard_update_stats(request, wizard_id):
         updated = form.save(commit=False)
         points_added = sum(max(0, getattr(updated, f) - old_values[f]) for f in stat_fields)
         cost = points_added * XP_COST_PER_POINT
-        if cost > updated.experience:
+        if not updated.spend_experience(cost):
             messages.error(
                 request,
                 f"Not enough XP - {cost} XP required"
             )
         else:
-            updated.experience -= cost
             updated.save()
             apprentice = getattr(updated, "apprentice", None)
             if apprentice is not None:
@@ -404,11 +405,10 @@ def wizard_add_spell(request, wizard_id):
         spell = form.cleaned_data["spell"]
         if wizard.wizard_spells.filter(spell=spell).exists():
             messages.info(request, "Already learned")
-        elif wizard.experience < XP_COST_PER_POINT:
+        elif wizard.spend_experience(XP_COST_PER_POINT):
             messages.error(f"Not enough XP {XP_COST_PER_POINT} required")
         else:
-            wizard.experience -= XP_COST_PER_POINT
-            wizard.save(update_fields=["experience"])
+            wizard.save(update_fields=["experience", "level"])
             WizardSpell.objects.create(wizard=wizard, spell=spell)
             messages.success(request, "Spell added.")
     return redirect("wizard-detail", wizard_id=wizard.id)
@@ -434,11 +434,10 @@ def wizard_spell_update_points(request, wizard_id, wizard_spell_id):
         messages.error(request, "Invalid points value.")
         return redirect("wizard-detail", wizard_id=wizard.id)
     cost = max(0, new_points - wizard_spell.points_invested) * XP_COST_PER_POINT
-    if cost > wizard.experience:
+    if not wizard.spend_experience(cost):
         messages.error(request, f"Not enough XP, {XP_COST_PER_POINT} XP required")
     else:
-        wizard.experience -= cost
-        wizard.save(update_fields=["experience"])
+        wizard.save(update_fields=["experience", "level"])
         wizard_spell.points_invested = new_points
         wizard_spell.save(update_fields=["points_invested"])
         messages.success(request, "Spell updated successfully")

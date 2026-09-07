@@ -89,7 +89,34 @@
     </div>
 
     <div class="tab-panel" id="panel-treasure-tables">
-      <div class="empty">Treasure tables coming soon.</div>
+      <input type="text" id="treasure-table-search" placeholder="Search treasure tables by name..." oninput="filterTreasureTables(this.value)" style="margin-bottom:1rem;">
+      {% if treasure_tables %}
+        <div class="spell-list" id="treasure-table-list">
+        {% for tt in treasure_tables %}
+          <div class="spell-card treasure-table-card" data-treasure-table-name="{{ tt.title|lower }}" data-is-base="{% if tt.is_base %}true{% else %}false{% endif %}">
+            <div class="spell-card-head">
+              <span class="spell-name">{{ tt.title }}</span>
+              {% if tt.is_base %}<span class="pill">Base Table</span>{% endif %}
+            </div>
+            <div style="overflow-x:auto; margin-top:.6rem;">
+              <table>
+                <tbody>
+                {% for row in tt.matrix %}
+                  <tr>
+                  {% for cell in row %}
+                    <td>{{ cell }}</td>
+                  {% endfor %}
+                  </tr>
+                {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty">No treasure tables defined yet. Add some in /admin.</div>
+      {% endif %}
     </div>
   </div>
 </div>
@@ -100,7 +127,6 @@
     {% csrf_token %}
     <div class="field"><label>Name</label>{{ wizard_form.name }}</div>
     <div class="stat-grid">
-      <div class="field"><label>Level</label>{{ wizard_form.level }}</div>
       <div class="field"><label>Health</label>{{ wizard_form.current_health }}</div>
       <div class="field"><label>Move</label>{{ wizard_form.move }}</div>
       <div class="field"><label>Fight</label>{{ wizard_form.fight }}</div>
@@ -117,6 +143,14 @@
 <div class="panel">
   <h2>Apprentice</h2>
   <p class="muted">Starts with the wizard's stats, minus 2 health and 2 will. Editable independently from here on.</p>
+  <div class="readable-stats" style="margin-bottom:.8rem;">
+    <span><strong>Move</strong> {{ apprentice.move }}</span>
+    <span><strong>Fight</strong> {{ apprentice.fight }}</span>
+    <span><strong>Shoot</strong> {{ apprentice.shoot }}</span>
+    <span><strong>Armour</strong> {{ apprentice.armour }}</span>
+    <span><strong>Will</strong> {{ apprentice.will }}</span>
+    <span><strong>Max Health</strong> {{ apprentice.health }}</span>
+  </div>
   <form method="post" action="{% url 'apprentice-update-stats' wizard.id %}" class="form-row" style="align-items:end;">
     {% csrf_token %}
     <div class="field"><label>Name</label>{{ apprentice_form.name }}</div>
@@ -354,7 +388,7 @@
       {% if monster_types %}
         <div class="spell-list" id="monster-list">
         {% for monster in monster_types %}
-          <div class="spell-card monster-card" data-monster-name="{{ monster.name|lower }}">
+          <div class="spell-card monster-card" data-monster-name="{{ monster.name|readable_name|lower }}">
             <div class="spell-card-head">
               <span class="spell-name">{{ monster.name|readable_name }}</span>
             </div>
@@ -392,7 +426,7 @@
       {% if soldier_types %}
         <div class="spell-list" id="soldier-type-list">
         {% for st in soldier_types %}
-          <div class="spell-card soldier-type-card" data-soldier-type-name="{{ st.name|lower }}">
+          <div class="spell-card soldier-type-card" data-soldier-type-name="{{ st.name|readable_name|lower }}">
             <div class="spell-card-head">
               <span class="spell-name">{{ st.name|readable_name }}</span>
               <span class="cost-chip" title="Base hire cost, no upgrades applied">{{ st.hire_cost }}gc</span>
@@ -431,7 +465,7 @@
       {% if all_spells %}
         <div class="spell-list" id="all-spells-list">
         {% for spell in all_spells %}
-          <div class="spell-card all-spell-card" data-spell-name="{{ spell.name|lower }}">
+          <div class="spell-card all-spell-card" data-spell-name="{{ spell.name|readable_name|lower }}">
             <div class="spell-card-head">
               <span class="spell-name">{{ spell.name|readable_name }}</span>
               <span class="pill">{{ spell.school }}</span>
@@ -673,5 +707,18 @@ function filterSoldierTypes(query) {
     card.classList.toggle('hidden', q.length > 0 && name.indexOf(q) === -1);
   });
 }
+function filterTreasureTables(query) {
+  var q = query.trim().toLowerCase();
+  document.querySelectorAll('.treasure-table-card').forEach(function(card) {
+    var isBase = card.getAttribute('data-is-base') === 'true';
+    if (q.length === 0) {
+      card.classList.toggle('hidden', !isBase);
+    } else {
+      var name = card.getAttribute('data-treasure-table-name') || '';
+      card.classList.toggle('hidden', name.indexOf(q) === -1);
+    }
+  });
+}
+filterTreasureTables('');
 </script>
 {% endblock %}
