@@ -351,20 +351,6 @@
               </form>
               {% if soldier.description %}<p class="spell-description">{{ soldier.description }}</p>{% endif %}
               </div>
-              <form method="post" class="readable-stats" action="{% url 'mortal-enemy-soldier-update-health' wizard.id soldier.id %}">
-                {% csrf_token %}
-                <span><strong>Move</strong> {{ soldier.effective_move }}</span>
-                <span><strong>Fight</strong> {{ soldier.effective_fight }}</span>
-                <span><strong>Shoot</strong> {{ soldier.effective_shoot }}</span>
-                <span><strong>Armour</strong> {{ soldier.effective_armour }}</span>
-                <span><strong>Will</strong> {{ soldier.effective_will }}</span>
-                <span>
-                  <strong>Health</strong>
-                  <input type="number" name="current_health" value="{{ soldier.current_health }}" style="width:55px;">
-                  <button type="submit">Set</button>
-                </span>
-              </form>
-              {% if soldier.description %}<p class="spell-description">{{ soldier.description }}</p>{% endif %}
             </div>
           {% endfor %}
           </div>
